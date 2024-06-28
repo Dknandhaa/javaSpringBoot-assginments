@@ -37,8 +37,25 @@ public class AccountService {
     }
 
     public double rateOfInterest(){
-        double interestRate = 5.5; // Example fixed interest rate
+        double interestRate = 1;
         return interestRate;
     }
 
+    @Scheduled(cron = "0 0 0 1 * ?")
+    public void updateBalances() {
+        List<Account> accounts = accountRepository.findAll(); 
+
+        double rate = rateOfInterest();
+        int time = 1;
+
+        for (Account account : accounts) {
+            double principal = account.getBalance();
+            double newBalance = principal * (pow((1 + rate / 100), time));
+            account.setBalance(newBalance);
+            accountRepository.save(account);
+        }
+    }
+
+
+    
 }
