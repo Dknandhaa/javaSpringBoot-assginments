@@ -36,15 +36,15 @@ public class AccountController {
         return accountService.withdraw(id, amount);
     }
 
-    @GetMapping("/rate")
+     @GetMapping("/rate")
     public double rateOfInterest(){
-        return accountService.rateOfInterest();
+        return bankInterestService.rateOfInterest();
     }
 
     @GetMapping("/{id}/interestAmount")
     public ResponseEntity<String> InterestAmount(@PathVariable Long id){
         double amount;
-        amount = (getAccount(id).getBalance()*accountService.rateOfInterest()*1)/100;
+        amount = (getAccount(id).getBalance()*bankInterestService.rateOfInterest()*1)/100;
         return ResponseEntity.ok("The interest ammount for the time being is " + amount);
     }
 }
