@@ -2,7 +2,6 @@ package com.app.bank.controller;
 
 import com.app.bank.service.AccountService;
 import com.app.bank.entity.Account;
-import com.app.bank.service.BankInterestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,5 +48,10 @@ public class AccountController {
         double amount;
         amount = (getAccount(id).getBalance()*interestRate*1)/100;
         return ResponseEntity.ok("The interest ammount for the time being is " + amount);
+    }
+
+    @PostMapping("/{id}/balance")
+    public Account updateBalance(@PathVariable Long id) {
+        return accountService.balance(id);
     }
 }
