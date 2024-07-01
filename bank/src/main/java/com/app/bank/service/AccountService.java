@@ -25,6 +25,16 @@ public class AccountService {
     @Value("${bank.interest.rate.endpoint}")
     private String bankInterestRateEndpoint;
 
+    public Double getInterestRate() {
+        try {
+            ResponseEntity<Double> response = restTemplate.getForEntity(bankInterestRateEndpoint, Double.class);
+            return response.getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public Account createAccount(Account account) {
         return accountRepository.save(account);
     }
@@ -35,7 +45,9 @@ public class AccountService {
 
     public Account deposit(Long id, double amount) {
         Account account = getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
-        account.setBalance(account.getBalance() + amount);
+        Double interestRate = getInterestRate();
+        double interestAmount = amount * (1 + interestRate / 100);
+        account.setBalance(account.getBalance() + amount + interestAmount);
         return accountRepository.save(account);
     }
 
@@ -48,29 +60,17 @@ public class AccountService {
         return accountRepository.save(account);
     }
 
-    public Double getInterestRate() {
-        try {
-            ResponseEntity<Double> response = restTemplate.getForEntity(bankInterestRateEndpoint, Double.class);
-            return response.getBody();
-        } catch (Exception e) {
-            // Handle exceptions
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public Account balance(Long id) {
-        Account account = getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
-        Double interestRate = getInterestRate();
-
-        if (interestRate != null) {
-            double principal = account.getBalance();
-            int time = 1;
-            double newBalance = principal * Math.pow((1 + interestRate / 100), time);
-            account.setBalance(newBalance);
-            return accountRepository.save(account);
-        } else {
-            throw new RuntimeException("Unable to fetch interest rate");
-        }
-    }
+//        Account account = getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
+//        Double interestRate = getInterestRate();
+//
+//        if (interestRate != null) {
+//            double principal = account.getBalance();
+//            int time = 1;
+//            double newBalance = principal * Math.pow((1 + interestRate / 100), time);
+//            account.setBalance(newBalance);
+//            return accountRepository.save(account);
+//        } else {
+//            throw new RuntimeException("Unable to fetch interest rate");
+//        }
+//    }
 }
