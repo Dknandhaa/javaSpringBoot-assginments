@@ -2,18 +2,13 @@ package com.app.bank.service;
 
 import com.app.bank.entity.Account;
 import com.app.bank.repository.AccountRepository;
-import org.hibernate.query.criteria.JpaConflictUpdateAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 import java.util.Optional;
-
-import static java.lang.Math.pow;
 
 @Service
 public class AccountService {
@@ -26,6 +21,9 @@ public class AccountService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Value("${bank.interest.rate.endpoint}")
+    private String bankInterestRateEndpoint;
 
     public Account createAccount(Account account) {
         return accountRepository.save(account);
@@ -50,10 +48,6 @@ public class AccountService {
         return accountRepository.save(account);
     }
 
-
-    @Value("${bank.interest.rate.endpoint}")
-    private String bankInterestRateEndpoint;
-
     public Double getInterestRate() {
         try {
             ResponseEntity<Double> response = restTemplate.getForEntity(bankInterestRateEndpoint, Double.class);
@@ -64,25 +58,19 @@ public class AccountService {
             return null;
         }
     }
-//    public double rateOfInterest(){
-//        double interestRate = 1; // Example fixed interest rate
-//        return interestRate;
-//    }
 
+    public Account balance(Long id) {
+        Account account = getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
+        Double interestRate = getInterestRate();
 
-//    @Scheduled(cron = "0 * * * * *")
-//    @Scheduled(cron = "0 0 0 1 * ?")
-//    public void updateBalances() {
-//        List<Account> accounts = accountRepository.findAll(); // Retrieve all accounts
-//
-//        double rate = bankInterestService.rateOfInterest();
-//        int time = 1;
-//
-//        for (Account account : accounts) {
-//            double principal = account.getBalance();
-//            double newBalance = principal * (pow((1 + rate / 100), time));
-//            account.setBalance(newBalance);
-//            accountRepository.save(account);
-//        }
-//    }
+        if (interestRate != null) {
+            double principal = account.getBalance();
+            int time = 1;
+            double newBalance = principal * Math.pow((1 + interestRate / 100), time);
+            account.setBalance(newBalance);
+            return accountRepository.save(account);
+        } else {
+            throw new RuntimeException("Unable to fetch interest rate");
+        }
+    }
 }
