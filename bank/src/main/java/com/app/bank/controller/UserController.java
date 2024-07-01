@@ -1,59 +1,57 @@
 package com.app.bank.controller;
 
-import com.app.bank.utility.JwtTokenUtil;
-import com.app.bank.entity.TokenReqRes;
-import com.app.bank.entity.Users;
-import com.app.bank.repository.UserRepository;
+import com.app.bank.service.AccountService;
+import com.app.bank.entity.Account;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/accounts")
-public class UserController {
-
-
+public class AccountController {
     @Autowired
-    private JwtTokenUtil jwtTokenUtil;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired(required=true)
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private AccountService accountService;
 
-
-    @PostMapping("/register")
-    public ResponseEntity<Object> registerUser(@RequestBody Users user){
-        String hashedPassword = bCryptPasswordEncoder.encode(user.getPassword());
-        user.setPassword(hashedPassword);
-
-        if (userRepository.save(user).getId() > 0) {
-            return ResponseEntity.ok("User Was Saved");
-        }
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("User Not Saved, Internal Server Error. Please Try Again");
+    @PostMapping
+    public Account createAccount(@RequestBody Account account, @RequestHeader(value = "Authorization", required = false) String token) {
+        return accountService.createAccount(account);
     }
 
-    @PostMapping("/generate-token")
-    public ResponseEntity<Object> generateToken(@RequestBody TokenReqRes tokenReqRes){
-        Users databaseUser = userRepository.findByUsername(tokenReqRes.getUsername());
-        if (databaseUser == null){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Sorry, User Does Not Exist");
-        }
-        if (new BCryptPasswordEncoder().matches(tokenReqRes.getPassword(), databaseUser.getPassword())){
-            String token = jwtTokenUtil.generateToken(tokenReqRes.getUsername());
-            tokenReqRes.setToken(token);
-            tokenReqRes.setExpirationTime("60 Sec");
-            return ResponseEntity.ok(tokenReqRes);
-        }else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Password Doesn't Match. Verify");
-        }
-    }
-    @PostMapping("/validate-token")
-    public ResponseEntity<Object> validateToken(@RequestBody TokenReqRes tokenReqRes){
-        return ResponseEntity.ok(jwtTokenUtil.validateToken(tokenReqRes.getToken()));
+    @GetMapping("/{id}")
+    public Account getAccount(@PathVariable Long id) {
+        return accountService.getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
     }
 
+    @PostMapping("/{id}/deposit")
+    public Account deposit(@PathVariable Long id, @RequestBody Map<String, Double> request,@RequestHeader(value = "Authorization", required = false) String token) {
+        Double amount = request.get("amount");
+        return accountService.deposit(id, amount);
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public Account withdraw(@PathVariable Long id, @RequestBody Map<String, Double> request,@RequestHeader(value = "Authorization", required = false) String token) {
+        Double amount = request.get("amount");
+        return accountService.withdraw(id, amount);
+    }
+
+    @GetMapping("/rate")
+    public double rateOfInterest(){
+        Double interestRate = accountService.getInterestRate();
+        return interestRate;
+    }
+
+    @GetMapping("/{id}/interestAmount")
+    public ResponseEntity<String> InterestAmount(@PathVariable Long id){
+        Double interestRate = accountService.getInterestRate();
+        double amount;
+        amount = (getAccount(id).getBalance()*interestRate*1)/100;
+        return ResponseEntity.ok("The interest ammount for the time being is " + amount);
+    }
+
+//    @GetMapping("/{id}/balance")
+//    public Account updateBalance(@PathVariable Long id) {
+//        return accountService.getAccount(id).orElseThrow(() -> new RuntimeException("Account not found"));
+//    }
 }
